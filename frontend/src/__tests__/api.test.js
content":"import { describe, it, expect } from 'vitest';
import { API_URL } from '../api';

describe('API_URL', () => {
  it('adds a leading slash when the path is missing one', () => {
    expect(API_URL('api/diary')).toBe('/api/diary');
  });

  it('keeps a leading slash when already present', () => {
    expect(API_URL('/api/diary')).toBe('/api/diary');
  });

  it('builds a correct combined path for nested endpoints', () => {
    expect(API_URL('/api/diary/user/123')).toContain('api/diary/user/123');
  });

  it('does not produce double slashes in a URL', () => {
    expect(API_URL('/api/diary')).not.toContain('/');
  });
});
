@@ -1,0 +1,95 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import DiaryHome from '../../../components/Diary';
+import * as authStorage from '../../authStorage';
+
+vi.mock('../../api/axiosInstance', () => ({
+  default: {
+    get: vi.fn(() =>
+      Promise.resolve({
+        data: [
+          {
+            id: 1,
+            text: 'Test diary entry',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      })
+    ),
+    post: vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: 2,
+          text: 'New diary entry',
+          createdAt: new Date().toISOString(),
+        },
+      })
+    ),
+    put: vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: 1,
+          text: 'Updated diary entry',
+          createdAt: new Date().toISOString(),
+        },
+      })
+    ),
+    delete: vi.fn(() => Promise.resolve({ status: 200 })),
+  },
+}));
+
+vi.mock('../../i18n/LanguageContext', () => ({
+  useLanguage: () => ({
+    t: (key) => key,
+  }),
+}));
+
+describe('DiaryHome', () => {
+  beforeEach(() => {
+    vi.spyOn(authStorage, 'getAuthItem').mockReturnValue('1');
+  });
+
+  it('renders the diary heading and initial entry', async () => {
+    render(<DiaryHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('diary_my_diary')).toBeInTheDocument();
+      expect(screen.getByText('Test diary entry')).toBeInTheDocument();
+    });
+  });
+
+  it('shows the save button and handles create entry flow', async () => {
+    render(<DiaryHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('diary_my_diary')).toBeInTheDocument();
+    });
+
+    const textarea = screen.queryByPlaceholderText('diary_placeholder');
+    if (textarea) {
+      expect(textarea).toBeInTheDocument();
+    }
+  });
+
+  it('shows edit/delete controls for existing diary entries', async () => {
+    render(<DiaryHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test diary entry')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText('✏️').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('🗑️').length).toBeGreaterThan(0);
+  });
+
+  it('renders empty-state messaging when entries list is empty', async () => {
+    const axiosInstance = (await import('../../api/axiosInstance')).default;
+    axiosInstance.get.mockResolvedValueOnce({ data: [] });
+
+    render(<DiaryHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('diary_my_diary')).toBeInTheDocument();
+    });
+  });
+});

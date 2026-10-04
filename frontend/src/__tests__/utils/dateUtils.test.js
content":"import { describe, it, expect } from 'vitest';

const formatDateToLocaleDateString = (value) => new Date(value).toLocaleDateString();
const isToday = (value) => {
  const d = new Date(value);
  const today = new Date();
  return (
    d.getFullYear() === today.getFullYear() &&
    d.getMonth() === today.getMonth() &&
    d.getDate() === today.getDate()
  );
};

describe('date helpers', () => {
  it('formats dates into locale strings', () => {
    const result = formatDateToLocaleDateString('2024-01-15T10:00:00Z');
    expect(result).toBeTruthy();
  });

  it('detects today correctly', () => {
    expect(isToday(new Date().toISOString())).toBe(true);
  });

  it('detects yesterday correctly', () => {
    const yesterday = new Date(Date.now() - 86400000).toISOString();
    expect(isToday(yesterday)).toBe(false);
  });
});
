@@ -1,0 +1,62 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  getAuthItem,
+  setAuthItem,
+  getAuthUser,
+  setAuthUser,
+  clearAuthSession,
+  getPhotoSrc,
+} from '../authStorage';
+
+describe('authStorage', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  it('stores and reads auth data from sessionStorage', () => {
+    setAuthItem('userId', '42');
+    expect(getAuthItem('userId')).toBe('42');
+  });
+
+  it('ignores null and undefined values', () => {
+    setAuthItem('userId', null);
+    setAuthItem('token', undefined);
+    expect(getAuthItem('userId')).toBeNull();
+    expect(getAuthItem('token')).toBeNull();
+  });
+
+  it('serializes and deserializes the current user object', () => {
+    const user = { id: 42, username: 'jane', role: 'CLIENT' };
+    setAuthUser(user);
+    expect(getAuthUser()).toEqual(user);
+  });
+
+  it('returns an empty object when the stored user is invalid JSON', () => {
+    sessionStorage.setItem('user', '{invalid');
+    expect(getAuthUser()).toEqual({});
+  });
+
+  it('clears all auth-related keys from both storage layers', () => {
+    setAuthItem('userId', '42');
+    setAuthItem('accessToken', 'abc');
+    setAuthUser({ id: 42 });
+
+    clearAuthSession();
+
+    expect(getAuthItem('userId')).toBeNull();
+    expect(getAuthItem('accessToken')).toBeNull();
+    expect(getAuthUser()).toEqual({});
+  });
+
+  it('resolves photo URLs correctly', () => {
+    expect(getPhotoSrc({ profilePicture: 'https://example.com/a.png' })).toBe('https://example.com/a.png');
+    expect(getPhotoSrc({ photoUrl: '/uploads/a.png' }, (path) => `https://api.example.com${path}`)).toBe('https://api.example.com/uploads/a.png');
+    expect(getPhotoSrc({})).toBeNull();
+  });
+});
