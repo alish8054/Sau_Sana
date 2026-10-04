@@ -22,11 +22,11 @@ repositories {
 
 ext {
     set('springAiVersion', "1.0.0-M1")
+    set('testcontainersVersion', "1.19.3")
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    // Main dependencies
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
@@ -36,8 +36,40 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     implementation 'org.jsoup:jsoup:1.17.2'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Testing dependencies - JUnit 5 (Jupiter)
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Spring Boot Test (includes AssertJ, Mockito, JSONPath)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Mockito for advanced mocking
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+
+    // AssertJ for fluent assertions
+    testImplementation 'org.assertj:assertj-core:3.24.1'
+
+    // JSON assertions
+    testImplementation 'com.jayway.jsonpath:json-path:2.8.1'
+
+    // TestContainers for PostgreSQL integration tests
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+
+    // REST Assured for API testing
+    testImplementation 'io.rest-assured:rest-assured:5.3.2'
+    testImplementation 'io.rest-assured:json-schema-validator:5.3.2'
+
+    // Faker for test data generation
+    testImplementation 'com.github.javafaker:javafaker:1.0.2'
+
+    // DBUnit for database testing
+    testImplementation 'org.dbunit:dbunit:2.8.0'
 }
 
 dependencyManagement {
@@ -47,5 +79,42 @@ dependencyManagement {
 }
 
 tasks.named('test') {
+    useJUnitPlatform()
+    
+    // Test coverage and reporting
+    finalizedBy jacocoTestReport
+    
+    // Show test output
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = false
+    }
+}
+
+// JaCoCo for code coverage
+plugins.apply 'jacoco'
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        csv.required = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/config/**',
+                '**/entity/**',
+                '**/dto/**',
+                '**/DiplomaApplication.class'
+            ])
+        }))
+    }
+}
+
+// Add test task configuration
+test {
     useJUnitPlatform()
 }
